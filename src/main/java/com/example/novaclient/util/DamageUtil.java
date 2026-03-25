@@ -1,12 +1,16 @@
 package com.example.novaclient.util;
 
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.component.type.ItemEnchantmentsComponent;
+import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.registry.tag.DamageTypeTags;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
@@ -20,23 +24,76 @@ public class DamageUtil {
         return player.getHealth() + player.getAbsorptionAmount();
     }
 
-    public static float calculateCrystalDamage(BlockPos crystalPos, net.minecraft.entity.Entity entity) {
+    public static float calculateCrystalDamage(BlockPos crystalPos, Entity entity) {
         return calculateCrystalDamage(Vec3d.ofCenter(crystalPos).add(0, 1, 0), entity);
     }
 
-    public static float calculateCrystalDamage(Vec3d crystalPos, net.minecraft.entity.Entity entity) {
+    public static float calculateCrystalDamage(Vec3d crystalPos, Entity entity) {
         if (mc.world == null) return 0;
         if (!(entity instanceof LivingEntity living)) return 0;
 
         double distance = Math.sqrt(entity.squaredDistanceTo(crystalPos));
         if (distance > 12) return 0;
 
-        double exposure = Explosion.getExposure(crystalPos, entity);
+        double exposure = getExposure(crystalPos, entity);
         double impact = (1.0 - distance / 12.0) * exposure;
         float damage = (float) ((impact * impact + impact) / 2.0 * 7.0 * 12.0 + 1.0);
 
         damage = getReductionAmount(living, damage);
         return Math.max(0, damage);
+    }
+
+    /**
+     * Client-side reimplementation of Explosion.getExposure (removed in 1.21.2+).
+     * Casts rays from the explosion centre to sample points on the entity's bounding
+     * box and returns the fraction that are not obstructed by solid blocks.
+     */
+    private static double getExposure(Vec3d source, Entity entity) {
+        if (mc.world == null) return 0;
+        var box = entity.getBoundingBox();
+        double dx = 1.0 / ((box.maxX - box.minX) * 2.0 + 1.0);
+        double dy = 1.0 / ((box.maxY - box.minY) * 2.0 + 1.0);
+        double dz = 1.0 / ((box.maxZ - box.minZ) * 2.0 + 1.0);
+        if (dx < 0 || dy < 0 || dz < 0) return 0;
+
+        double offsetX = (1.0 - Math.floor(1.0 / dx) * dx) / 2.0;
+        double offsetZ = (1.0 - Math.floor(1.0 / dz) * dz) / 2.0;
+
+        int unobstructed = 0;
+        int total = 0;
+        for (double fx = 0; fx <= 1.0; fx += dx) {
+            for (double fy = 0; fy <= 1.0; fy += dy) {
+                for (double fz = 0; fz <= 1.0; fz += dz) {
+                    double tx = MathHelper.lerp(fx, box.minX, box.maxX) + offsetX;
+                    double ty = MathHelper.lerp(fy, box.minY, box.maxY);
+                    double tz = MathHelper.lerp(fz, box.minZ, box.maxZ) + offsetZ;
+                    if (!rayHitsBlock(source, new Vec3d(tx, ty, tz))) {
+                        unobstructed++;
+                    }
+                    total++;
+                }
+            }
+        }
+        return total == 0 ? 0.0 : (double) unobstructed / total;
+    }
+
+    /** Returns true if a solid block lies between {@code from} and {@code to}. */
+    private static boolean rayHitsBlock(Vec3d from, Vec3d to) {
+        if (mc.world == null) return true;
+        Vec3d delta = to.subtract(from);
+        double len = delta.length();
+        if (len == 0) return false;
+        Vec3d step = delta.normalize().multiply(0.3);
+        int steps = (int) Math.ceil(len / 0.3);
+        for (int i = 0; i <= steps; i++) {
+            double t = Math.min(i * 0.3, len);
+            Vec3d pos = from.add(delta.normalize().multiply(t));
+            var state = mc.world.getBlockState(BlockPos.ofFloored(pos));
+            if (!state.isAir() && state.getBlock().getBlastResistance() > 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static float getReductionAmount(LivingEntity entity, float damage) {
@@ -58,12 +115,33 @@ public class DamageUtil {
         }
 
         float armorReduction = net.minecraft.entity.DamageUtil.getDamageLeft(entity, damage, source, armor, toughness);
-        armorReduction = armorReduction * (1 - resistance / 25f);
+        armorReduction *= (1 - resistance / 25f);
 
-        int protection = EnchantmentHelper.getProtectionAmount(mc.world, entity, source);
+        // EnchantmentHelper.getProtectionAmount requires ServerWorld in 1.21+, so we
+        // compute protection manually from the entity's equipped armor items.
+        int protection = getProtectionAmount(entity, source);
         float protectionReduction = MathHelper.clamp(protection, 0, 20);
-        armorReduction = armorReduction * (1 - protectionReduction / 25f);
+        armorReduction *= (1 - protectionReduction / 25f);
 
         return Math.max(armorReduction, 0);
+    }
+
+    /**
+     * Client-side reimplementation of EnchantmentHelper.getProtectionAmount.
+     * Sums {@link Enchantment#getProtectionAmount} across all armor the entity wears.
+     */
+    private static int getProtectionAmount(LivingEntity entity, DamageSource source) {
+        int total = 0;
+        for (var stack : entity.getArmorItems()) {
+            if (stack.isEmpty()) continue;
+            ItemEnchantmentsComponent enchants = EnchantmentHelper.getEnchantments(stack);
+            for (RegistryEntry<Enchantment> entry : enchants.getEnchantments()) {
+                int level = enchants.getLevel(entry);
+                if (level > 0) {
+                    total += entry.value().getProtectionAmount(level, source);
+                }
+            }
+        }
+        return total;
     }
 }
