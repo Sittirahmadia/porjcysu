@@ -4,6 +4,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.component.type.ItemEnchantmentsComponent;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
+import net.minecraft.enchantment.Enchantments;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.attribute.EntityAttributes;
@@ -117,8 +118,6 @@ public class DamageUtil {
         float armorReduction = net.minecraft.entity.DamageUtil.getDamageLeft(entity, damage, source, armor, toughness);
         armorReduction *= (1 - resistance / 25f);
 
-        // EnchantmentHelper.getProtectionAmount requires ServerWorld in 1.21+, so we
-        // compute protection manually from the entity's equipped armor items.
         int protection = getProtectionAmount(entity, source);
         float protectionReduction = MathHelper.clamp(protection, 0, 20);
         armorReduction *= (1 - protectionReduction / 25f);
@@ -127,18 +126,31 @@ public class DamageUtil {
     }
 
     /**
-     * Client-side reimplementation of EnchantmentHelper.getProtectionAmount.
-     * Sums {@link Enchantment#getProtectionAmount} across all armor the entity wears.
+     * Client-side reimplementation of EnchantmentHelper.getProtectionAmount for 1.21.4.
+     * Since the vanilla helper now strictly requires a ServerWorld to evaluate data-driven
+     * enchantments, client-side mods must manually match registry keys and apply vanilla math.
      */
     private static int getProtectionAmount(LivingEntity entity, DamageSource source) {
         int total = 0;
         for (var stack : entity.getArmorItems()) {
             if (stack.isEmpty()) continue;
+            
             ItemEnchantmentsComponent enchants = EnchantmentHelper.getEnchantments(stack);
+            
             for (RegistryEntry<Enchantment> entry : enchants.getEnchantments()) {
                 int level = enchants.getLevel(entry);
                 if (level > 0) {
-                    total += entry.value().getProtectionAmount(level, source);
+                    if (entry.matchesKey(Enchantments.PROTECTION)) {
+                        total += level;
+                    } else if (entry.matchesKey(Enchantments.BLAST_PROTECTION) && source.isIn(DamageTypeTags.IS_EXPLOSION)) {
+                        total += level * 2;
+                    } else if (entry.matchesKey(Enchantments.FIRE_PROTECTION) && source.isIn(DamageTypeTags.IS_FIRE)) {
+                        total += level * 2;
+                    } else if (entry.matchesKey(Enchantments.PROJECTILE_PROTECTION) && source.isIn(DamageTypeTags.IS_PROJECTILE)) {
+                        total += level * 2;
+                    } else if (entry.matchesKey(Enchantments.FEATHER_FALLING) && source.isIn(DamageTypeTags.IS_FALL)) {
+                        total += level * 3;
+                    }
                 }
             }
         }
