@@ -3,8 +3,8 @@ package com.example.novaclient.module.modules.combat;
 import com.example.novaclient.event.EventHandler;
 import com.example.novaclient.event.events.AttackEntityEvent;
 import com.example.novaclient.event.events.TickEvent;
-import com.example.novaclient.mixin.MinecraftClientAccessor;
 import com.example.novaclient.module.Category;
+import com.example.novaclient.util.CombatUtil;
 import com.example.novaclient.module.Module;
 import com.example.novaclient.module.setting.BooleanSetting;
 import com.example.novaclient.module.setting.NumberSetting;
@@ -54,13 +54,13 @@ public class BreachSwap extends Module {
             int prevSlot = mc.player.getInventory().selectedSlot;
             mc.player.getInventory().selectedSlot = maceSlot;
             isSwappingAttack = true;
-            ((MinecraftClientAccessor) mc).invokeDoAttack();
+            CombatUtil.doAttack();
             isSwappingAttack = false;
             mc.player.getInventory().selectedSlot = prevSlot;
         } else {
             mc.player.getInventory().selectedSlot = maceSlot;
             isSwappingAttack = true;
-            ((MinecraftClientAccessor) mc).invokeDoAttack();
+            CombatUtil.doAttack();
             isSwappingAttack = false;
             shouldSwitchBack = true;
             switchTime = System.currentTimeMillis();
@@ -89,11 +89,11 @@ public class BreachSwap extends Module {
                     if (silentSwap.getValue()) {
                         int prevSlot = mc.player.getInventory().selectedSlot;
                         mc.player.getInventory().selectedSlot = maceSlot;
-                        ((MinecraftClientAccessor) mc).invokeDoAttack();
+                        CombatUtil.doAttack();
                         mc.player.getInventory().selectedSlot = prevSlot;
                     } else {
                         mc.player.getInventory().selectedSlot = maceSlot;
-                        ((MinecraftClientAccessor) mc).invokeDoAttack();
+                        CombatUtil.doAttack();
                         switchTime = System.currentTimeMillis();
                         shouldSwitchBack = true;
                     }

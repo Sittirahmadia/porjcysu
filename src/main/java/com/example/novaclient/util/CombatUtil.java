@@ -4,10 +4,19 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Items;
+import net.minecraft.util.Hand;
 import net.minecraft.util.math.Vec3d;
 
 public class CombatUtil {
     private static final MinecraftClient mc = MinecraftClient.getInstance();
+
+    public static void doAttack() {
+        if (mc.player == null || mc.interactionManager == null) return;
+        Entity target = mc.targetedEntity;
+        if (target == null) return;
+        mc.interactionManager.attackEntity(mc.player, target);
+        mc.player.swingHand(Hand.MAIN_HAND);
+    }
 
     public static boolean isShieldFacingAway(PlayerEntity target) {
         if (!target.isBlocking()) return false;

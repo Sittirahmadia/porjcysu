@@ -3,8 +3,8 @@ package com.example.novaclient.module.modules.combat;
 import com.example.novaclient.NovaClient;
 import com.example.novaclient.event.EventHandler;
 import com.example.novaclient.event.events.TickEvent;
-import com.example.novaclient.mixin.MinecraftClientAccessor;
 import com.example.novaclient.module.Category;
+import com.example.novaclient.util.CombatUtil;
 import com.example.novaclient.module.Module;
 import com.example.novaclient.module.modules.misc.Teams;
 import com.example.novaclient.module.setting.BooleanSetting;
@@ -123,7 +123,7 @@ public class AutoMace extends Module {
             int axeSlot = onlyAxe.getValue() ? mc.player.getInventory().selectedSlot : getAxeSlotId();
             if (axeSlot != -1) {
                 mc.player.getInventory().selectedSlot = axeSlot;
-                ((MinecraftClientAccessor) mc).invokeDoAttack();
+                CombatUtil.doAttack();
             }
             slamTick = 2;
         } else if (slamTick == 2) {
@@ -146,7 +146,7 @@ public class AutoMace extends Module {
         }
 
         if (hasMace() && attackTimer.hasElapsedTime((long) attackDelay.getValue(), true)) {
-            ((MinecraftClientAccessor) mc).invokeDoAttack();
+            CombatUtil.doAttack();
             maceHit = true;
         }
     }

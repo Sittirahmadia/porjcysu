@@ -2,7 +2,6 @@ package com.example.novaclient.module.modules.combat;
 
 import com.example.novaclient.event.EventHandler;
 import com.example.novaclient.event.events.TickEvent;
-import com.example.novaclient.mixin.MinecraftClientAccessor;
 import com.example.novaclient.module.Category;
 import com.example.novaclient.module.Module;
 import com.example.novaclient.module.setting.BooleanSetting;
@@ -103,8 +102,8 @@ public class ShieldBreaker extends Module {
         }
 
         if (attackTimer.hasElapsedTime(attackDelay.getValueInt()) || savedSlot == -1) {
-            ((MinecraftClientAccessor) mc).invokeDoAttack();
-            if (autoStun.getValue()) ((MinecraftClientAccessor) mc).invokeDoAttack();
+            CombatUtil.doAttack();
+            if (autoStun.getValue()) CombatUtil.doAttack();
             cpsTimer.reset();
             attackTimer.reset();
             swapBackTimer.reset();

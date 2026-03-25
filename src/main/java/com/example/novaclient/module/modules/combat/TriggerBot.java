@@ -4,7 +4,6 @@ import com.example.novaclient.NovaClient;
 import com.example.novaclient.event.EventHandler;
 import com.example.novaclient.event.events.TickEvent;
 import com.example.novaclient.event.events.WorldChangeEvent;
-import com.example.novaclient.mixin.MinecraftClientAccessor;
 import com.example.novaclient.module.Category;
 import com.example.novaclient.module.Module;
 import com.example.novaclient.module.modules.misc.Teams;
@@ -241,7 +240,7 @@ public class TriggerBot extends Module {
             mc.player.swingHand(Hand.MAIN_HAND);
             mc.player.resetLastAttackedTicks();
         } else {
-            ((MinecraftClientAccessor) mc).invokeDoAttack();
+            CombatUtil.doAttack();
         }
         if (samePlayer.getValue() && target != null) {
             lastTargetUUID = target.getUuidAsString();
