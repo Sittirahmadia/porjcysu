@@ -4,7 +4,9 @@ import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.ItemEnchantmentsComponent;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.item.ItemStack;
+import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.world.World;
 
 public class EnchantmentUtil {
@@ -15,10 +17,11 @@ public class EnchantmentUtil {
         ItemEnchantmentsComponent enchantments = stack.get(DataComponentTypes.ENCHANTMENTS);
         if (enchantments == null) return false;
 
-        return world.getRegistryManager()
-                .getOptional(enchantmentKey.getRegistryRef())
-                .flatMap(registry -> registry.getOptional(enchantmentKey.getValue()))
-                .map(entry -> enchantments.getLevel(entry) > 0)
+        Registry<Enchantment> registry = world.getRegistryManager()
+                .getOrThrow(enchantmentKey.getRegistryRef());
+
+        return registry.getOptional(enchantmentKey)
+                .map((RegistryEntry<Enchantment> entry) -> enchantments.getLevel(entry) > 0)
                 .orElse(false);
     }
 
@@ -28,10 +31,11 @@ public class EnchantmentUtil {
         ItemEnchantmentsComponent enchantments = stack.get(DataComponentTypes.ENCHANTMENTS);
         if (enchantments == null) return 0;
 
-        return world.getRegistryManager()
-                .getOptional(enchantmentKey.getRegistryRef())
-                .flatMap(registry -> registry.getOptional(enchantmentKey.getValue()))
-                .map(entry -> enchantments.getLevel(entry))
+        Registry<Enchantment> registry = world.getRegistryManager()
+                .getOrThrow(enchantmentKey.getRegistryRef());
+
+        return registry.getOptional(enchantmentKey)
+                .map((RegistryEntry<Enchantment> entry) -> enchantments.getLevel(entry))
                 .orElse(0);
     }
 }

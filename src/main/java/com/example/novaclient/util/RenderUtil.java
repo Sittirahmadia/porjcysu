@@ -1,7 +1,9 @@
 package com.example.novaclient.util;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.client.gl.ShaderProgramKeys;
 import net.minecraft.client.render.BufferBuilder;
+import net.minecraft.client.render.BufferRenderer;
 import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.VertexFormat;
@@ -17,7 +19,7 @@ public class RenderUtil {
     public static void setupRender() {
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
-        RenderSystem.setShader(GameRenderer::getPositionColorProgram);
+        RenderSystem.setShader(ShaderProgramKeys.POSITION_COLOR);
         RenderSystem.disableCull();
         RenderSystem.depthMask(false);
     }
@@ -86,6 +88,6 @@ public class RenderUtil {
         buffer.vertex(matrix, minX, minY, maxZ).color(red, green, blue, alpha);
         buffer.vertex(matrix, minX, maxY, maxZ).color(red, green, blue, alpha);
 
-        tessellator.draw();
+        BufferRenderer.drawWithGlobalProgram(buffer.end());
     }
 }

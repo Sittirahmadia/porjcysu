@@ -145,7 +145,7 @@ public class AutoMace extends Module {
             switchToAppropriateMace(fallDist);
         }
 
-        if (hasMace() && attackTimer.hasElapsedTime((long) attackDelay.getValue(), true)) {
+        if (hasMace() && attackTimer.hasElapsedTime(attackDelay.getValue().longValue(), true)) {
             CombatUtil.doAttack();
             maceHit = true;
         }
