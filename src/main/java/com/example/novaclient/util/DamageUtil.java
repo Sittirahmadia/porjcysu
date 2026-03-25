@@ -31,7 +31,7 @@ public class DamageUtil {
         double distance = Math.sqrt(entity.squaredDistanceTo(crystalPos));
         if (distance > 12) return 0;
 
-        double exposure = Explosion.getExposure(crystalPos, entity, mc.world);
+        double exposure = Explosion.getExposure(crystalPos, entity);
         double impact = (1.0 - distance / 12.0) * exposure;
         float damage = (float) ((impact * impact + impact) / 2.0 * 7.0 * 12.0 + 1.0);
 
@@ -60,7 +60,7 @@ public class DamageUtil {
         float armorReduction = net.minecraft.entity.DamageUtil.getDamageLeft(entity, damage, source, armor, toughness);
         armorReduction = armorReduction * (1 - resistance / 25f);
 
-        int protection = EnchantmentHelper.getProtectionAmount(mc.world.getRegistryManager(), entity, source);
+        int protection = EnchantmentHelper.getProtectionAmount(mc.world, entity, source);
         float protectionReduction = MathHelper.clamp(protection, 0, 20);
         armorReduction = armorReduction * (1 - protectionReduction / 25f);
 
